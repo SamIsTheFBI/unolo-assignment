@@ -10,7 +10,8 @@ function CheckIn({ user }) {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [message, setMessage] = useState({ text: '', type: '' });
+    const [lastDistance, setLastDistance] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -58,7 +59,7 @@ function CheckIn({ user }) {
     const handleCheckIn = async (e) => {
         e.preventDefault();
         setError('');
-        setSuccess('');
+        setMessage({ text: '', type: '' });
         setSubmitting(true);
 
         try {
@@ -70,7 +71,21 @@ function CheckIn({ user }) {
             });
 
             if (response.data.success) {
-                setSuccess('Checked in successfully!');
+                const distance = response.data.data.distance_from_client;
+                setLastDistance(distance);
+                
+                if (distance > 0.5) {
+                    setMessage({ 
+                        text: `Checked in successfully! Warning: You are ${distance}km from the client location.`,
+                        type: 'warning'
+                    });
+                } else {
+                    setMessage({ 
+                        text: 'Checked in successfully!',
+                        type: 'success'
+                    });
+                }
+                
                 setSelectedClient('');
                 setNotes('');
                 fetchData(); // Refresh data
@@ -86,14 +101,17 @@ function CheckIn({ user }) {
 
     const handleCheckOut = async () => {
         setError('');
-        setSuccess('');
+        setMessage({ text: '', type: '' });
         setSubmitting(true);
 
         try {
             const response = await api.put('/checkin/checkout');
             
             if (response.data.success) {
-                setSuccess('Checked out successfully!');
+                setMessage({ 
+                    text: 'Checked out successfully!',
+                    type: 'success'
+                });
                 setActiveCheckin(null);
             } else {
                 setError(response.data.message);
@@ -123,9 +141,13 @@ function CheckIn({ user }) {
                 </div>
             )}
 
-            {success && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                    {success}
+            {message.text && (
+                <div className={`border px-4 py-3 rounded mb-4 ${
+                    message.type === 'warning' 
+                        ? 'bg-yellow-100 border-yellow-400 text-yellow-700'
+                        : 'bg-green-100 border-green-400 text-green-700'
+                }`}>
+                    {message.text}
                 </div>
             )}
 

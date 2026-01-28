@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { calculateDistance } = require('../utils/distance');
 
 const router = express.Router();
 
@@ -30,6 +31,20 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Client ID is required' });
     }
 
+    if (!latitude || !longitude) {
+      return res.status(400).json({ success: false, message: 'Location coordinates are required' });
+    }
+
+    // Get client location for distance calculation
+    const [clients] = await pool.execute(
+      'SELECT latitude, longitude FROM clients WHERE id = ?',
+      [client_id]
+    );
+
+    if (clients.length === 0) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
     // Check if employee is assigned to this client
     const [assignments] = await pool.execute(
       'SELECT * FROM employee_clients WHERE employee_id = ? AND client_id = ?',
@@ -53,16 +68,26 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Calculate distance from client location
+    const client = clients[0];
+    const distance = calculateDistance(
+      parseFloat(latitude),
+      parseFloat(longitude),
+      parseFloat(client.latitude),
+      parseFloat(client.longitude)
+    );
+
     const [result] = await pool.execute(
-      `INSERT INTO checkins (employee_id, client_id, latitude, longitude, notes, status)
-             VALUES (?, ?, ?, ?, ?, 'checked_in')`,
-      [req.user.id, client_id, latitude, longitude, notes || null]
+      `INSERT INTO checkins (employee_id, client_id, latitude, longitude, distance_from_client, notes, status)
+             VALUES (?, ?, ?, ?, ?, ?, 'checked_in')`,
+      [req.user.id, client_id, latitude, longitude, distance, notes || null]
     );
 
     res.status(201).json({
       success: true,
       data: {
         id: result.insertId,
+        distance_from_client: distance,
         message: 'Checked in successfully'
       }
     });
