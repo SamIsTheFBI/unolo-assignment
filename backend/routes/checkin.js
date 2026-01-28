@@ -54,7 +54,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
 
         const [result] = await pool.execute(
-            `INSERT INTO checkins (employee_id, client_id, lat, lng, notes, status)
+            `INSERT INTO checkins (employee_id, client_id, latitude, longitude, notes, status)
              VALUES (?, ?, ?, ?, ?, 'checked_in')`,
             [req.user.id, client_id, latitude, longitude, notes || null]
         );
@@ -110,10 +110,12 @@ router.get('/history', authenticateToken, async (req, res) => {
         const params = [req.user.id];
 
         if (start_date) {
-            query += ` AND DATE(ch.checkin_time) >= '${start_date}'`;
+            query += ` AND DATE(ch.checkin_time) >= ?`;
+            params.push(start_date);
         }
         if (end_date) {
-            query += ` AND DATE(ch.checkin_time) <= '${end_date}'`;
+            query += ` AND DATE(ch.checkin_time) <= ?`;
+            params.push(end_date);
         }
 
         query += ' ORDER BY ch.checkin_time DESC';
