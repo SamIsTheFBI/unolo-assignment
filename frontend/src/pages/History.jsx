@@ -42,7 +42,7 @@ function History({ user }) {
         fetchHistory();
     };
 
-    const totalHours = checkins.reduce((total, checkin) => {
+    const totalHours = checkins ? checkins.reduce((total, checkin) => {
         if (checkin.checkout_time) {
             const checkinTime = new Date(checkin.checkin_time);
             const checkoutTime = new Date(checkin.checkout_time);
@@ -50,7 +50,7 @@ function History({ user }) {
             return total + hours;
         }
         return total;
-    }, 0);
+    }, 0) : 0;
 
     if (loading) {
         return (
